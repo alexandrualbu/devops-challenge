@@ -13,11 +13,6 @@ provider "aws" {
     secret_key = ""
 }
 
-resource "aws_key_pair" "qed-kp" {
-  key_name   = "qed-key"
-  public_key = file("~/.ssh/id_rsa.pub") # Path to your public key
-}
-
 resource "aws_vpc" "qed-vpc" {
   cidr_block = "10.0.0.0/16"
 
@@ -32,7 +27,7 @@ resource "aws_subnet" "qed-subnet" {
   map_public_ip_on_launch = true
 
   tags = {
-    Name = "main-subnet"
+    Name = "qed-subnet"
   }
 
   depends_on = [ aws_vpc.qed-vpc ]
@@ -100,14 +95,13 @@ resource "aws_security_group" "qed-sg" {
     Name = "qed-security-group"
   }
 
-  depends_on = [ aws_vpc.qed-vpc, aws_subnet.qed-subnet ]
+  depends_on = [ aws_vpc.qed-vpc]
 }
 
 
 resource "aws_instance" "qed-instance" {
     ami = "ami-0cf2b4e024cdb6960"
     instance_type = "t2.micro"
-    key_name      = aws_key_pair.qed-kp.key_name
     vpc_security_group_ids      = [aws_security_group.qed-sg.id]
     subnet_id                   = aws_subnet.qed-subnet.id
     associate_public_ip_address = true
@@ -116,23 +110,15 @@ resource "aws_instance" "qed-instance" {
         Name = "qed-ec2-nodejs"
     }
 
-    connection {
-        type        = "ssh"
-        user        = "ubuntu"
-        private_key = file("~/.ssh/id_rsa") # Path to your private key
-        host        = self.public_ip
-    }
+    user_data = <<-EOF
+        #!/bin/bash
+        apt update -y
+        apt-get install -y docker.io
+        service docker start
+        usermod -aG docker root
+        docker run -d -p 80:3000 alexalbu/qed
+    EOF
 
-    provisioner "remote-exec" {
-        inline = [
-        "sudo apt-get update -y",
-        "sudo apt-get install -y docker.io",
-        "sudo systemctl start docker",
-        "sudo usermod -aG docker ubuntu",
-        "sudo docker run -d -p 80:3000 alexalbu/qed"
-        ]
-    }
-
-    depends_on = [  aws_key_pair.qed-kp, aws_security_group.qed-sg,  aws_subnet.qed-subnet, aws_vpc.qed-vpc]
+    depends_on = [  aws_security_group.qed-sg]
 }
 
