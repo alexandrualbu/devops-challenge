@@ -1,0 +1,38 @@
+name: Deploy and Delayed Destroy Terraform EC2 Instance
+
+on:
+  push:
+    branches:
+    - qed # Change this to your main branch name if different
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up Terraform
+      uses: hashicorp/setup-terraform@v1
+      with:
+        terraform_version: 1.0.0 # Replace with your desired Terraform version
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-west-2 # Replace with your desired region
+
+    - name: Initialize Terraform
+      run: terraform init
+
+    - name: Apply Terraform changes
+      run: terraform apply -auto-approve
+
+    - name: Wait for 1 minute
+      run: sleep 60 # Sleep for 60 seconds (1 minute)
+
+    - name: Destroy Terraform resources
+      run: terraform destroy -auto-approve
