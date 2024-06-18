@@ -7,6 +7,7 @@ on:
 
 jobs:
   deploy:
+    needs: build
     runs-on: ubuntu-latest
 
     steps:
@@ -31,8 +32,8 @@ jobs:
     - name: Apply Terraform changes
       run: terraform apply -auto-approve
 
-    - name: Wait for 1 minute
-      run: sleep 60 # Sleep for 60 seconds (1 minute)
+    - name: Wait for 2 minutes
+      run: sleep 120 # Sleep for 60 seconds (1 minute)
 
     - name: Destroy Terraform resources
       run: terraform destroy -auto-approve
